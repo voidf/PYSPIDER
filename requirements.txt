@@ -1,0 +1,8 @@
+ujson
+aiohttp
+fastapi
+mongoengine
+pandas
+matplotlib
+numpy
+mplfinance

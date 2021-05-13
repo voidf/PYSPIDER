@@ -7,7 +7,9 @@
   "author": "yaya",
   "build": {
     "appId": "demo.example",
-    "win": {}
+    "win": {
+      "icon": "public/M1.png"
+    }
   },
   "homepage": "./",
   "dependencies": {
@@ -19,7 +21,6 @@
     "axios": "^0.21.1",
     "concurrently": "^6.1.0",
     "cross-env": "^7.0.3",
-
     "electron-is-dev": "^2.0.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
