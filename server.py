@@ -67,7 +67,7 @@ async def make_req2(dvd: int):
     prv = ima - datetime.timedelta(days=dvd)
     async with aiohttp.ClientSession(trace_configs=[tracecfg]) as s:      
         async with s.get(
-            f'''https://api.nasdaq.com/api/quote/BTC/historical?assetclass=crypto&fromdate={prv.strftime('%Y-%m-%d')}&limit=18&todate={ima.strftime('%Y-%m-%d')}''',
+            f'''https://api.nasdaq.com/api/quote/BTC/historical?assetclass=crypto&fromdate={prv.strftime('%Y-%m-%d')}&limit={dvd}8&todate={ima.strftime('%Y-%m-%d')}''',
             headers={
                 "accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
                 "accept-encoding":"gzip, deflate, br",
@@ -102,6 +102,10 @@ def save_and_get_len(res:str):
     return len(Stock.objects())
 
 
+import matplotlib.pyplot as plt
+import mpl_finance as mpf
+from matplotlib.pylab import date2num
+
 @app.get('/{prv}')
 async def master(prv: int):
     s = ujson.loads(await make_req2(prv))['data']['tradesTable']['rows']
@@ -112,14 +116,25 @@ async def master(prv: int):
         _open = Decimal(raw['open'])
         _high = Decimal(raw['high'])
         _low = Decimal(raw['low'])
-        li.append((_date, _open, _close, _high, _low))
+        li.append((date2num(_date), _open, _high, _low, _close))
     print(*li)
+    fig, ax = plt.subplots()
+    fig.subplots_adjust(bottom=0.2)
+    ax.xaxis_date()
+    plt.yticks()
+    plt.xticks(rotation=45)
+    plt.xlabel("History")
+    plt.ylabel("USD")
+
+    mpf.candlestick_ohlc(ax, li, width=1.5, colorup='r', colordown='green')
+
+    plt.grid()
+
+    plt.savefig('a.png')
+
     return li
     
     # return save_and_get_len(await make_req(prv))
-
-import matplotlib.pyplot as plt
-from matplotlib.pylab import date2num
 
 @app.get('/draw')
 async def draw_(prv: int):
