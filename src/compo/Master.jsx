@@ -10,6 +10,7 @@ import { toFirstCharUpperCase } from "../utils/constants";
 import SaveIcon from '@material-ui/icons/Save';
 import ArrowDownwardIcon from '@material-ui/icons/ArrowDownward';
 import EjectIcon from '@material-ui/icons/Eject';
+import ArchiveIcon from '@material-ui/icons/Archive';
 
 const useStyles = makeStyles(theme => ({
     pokedexContainer: {
@@ -59,6 +60,51 @@ const Master = (props) => {
         <AppBar position="static">
             <Toolbar>
                 
+                <Button 
+                    variant="contained" 
+                    color="secondary"
+                    startIcon={<ArchiveIcon />}
+
+                    size="large"
+                    style={{
+                        color:'#FFF',
+                        width:'200px',
+                        margin:5
+                    }}
+                    onClick = {()=>{
+                        const uurl = baseurl+"info?ts="+Date.now()
+                        axios.get(uurl).then(
+                            resp => {
+                                // console.log(resp.data)
+                                ReactDom.render(
+                                    <Grid container spacing={2}>
+                                    {
+                                        resp.data.map(
+                                            (item1) =>{
+                                                console.log(item1);
+                                                <Typography>
+                                                    {Object.values(item1)}
+                                                </Typography>
+                                            }
+                                        )
+                                    }
+                                    </Grid>
+                                
+                                , document.querySelector("#ASDF"))
+                            }
+                        )
+                        // const a =(
+                        //     <>
+                        //         <Typography variant="h1">
+                        //             <img src={uurl} alt="" height="100%" width="100%" />
+                        //         </Typography>
+
+                        //     </>
+                        // );
+                        // ReactDom.render(a, document.querySelector("#ASDF"))
+                    }}
+                >库内数据</Button>
+
                 <Button 
                     variant="contained" 
                     color="secondary"
@@ -169,18 +215,6 @@ const Master = (props) => {
                     />
                 </Box>
 
-
-                   
-                    {/* <TextField 
-                        id="standard-basic" 
-                        label="需要爬前多少天的数据？"
-                        
-                        fullWidth
-                        style={{
-                            margin:15
-                        }}
-                        color="secondary"
-                    ></TextField> */}
             </Toolbar>
         </AppBar>
         <Card id="ASDF" style={{height:"100%"}}>

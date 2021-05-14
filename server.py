@@ -185,7 +185,17 @@ async def load_1():
         "Access-Control-Allow-Headers": "Access-Control-Allow-Origin"
     })
 
-
+@app.get('/info')
+async def info_1():
+    l = [j.get_dict() for j in BTCHisInfo.objects()]
+    # datetime.datetime.now().t
+    # for p, i in enumerate(l):
+    #     l[p]['date'] = i['date'].timestamp()
+    return Response(ujson.dumps(l), headers={
+        'Access-Control-Allow-Origin': '*',
+        "Access-Control-Allow-Methods": "POST, GET, PUT, OPTIONS, DELETE",
+        "Access-Control-Allow-Headers": "Access-Control-Allow-Origin"
+    })
 
 
 if __name__ == '__main__':
