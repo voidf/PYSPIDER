@@ -1,15 +1,16 @@
 {
-  "name": "reactt",
+  "name": "BTC-Watcher",
   "version": "0.1.0",
   "private": true,
   "main": "public/electron.js",
-  "description": "nandemonai",
+  "description": "每日消费不起比特币观察",
   "author": "yaya",
   "build": {
     "appId": "demo.example",
     "win": {
       "icon": "public/M1.png"
-    }
+    },
+    "productName":"每日消费不起比特币观察"
   },
   "homepage": "./",
   "dependencies": {

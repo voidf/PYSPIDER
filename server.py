@@ -1,5 +1,7 @@
+# 除了需要按requirements.txt安装外，还需要本地装一个MongoDB才能动（为了存入数据库）
+# 当然存库其实是完全没有必要的，所以只用“直接爬”的话是完全没有问题的
 from fastapi import *
-
+from fastapi.responses import *
 from pydantic import BaseModel
 
 from typing import Optional
@@ -13,6 +15,7 @@ from mongoengine import *
 from decimal import Decimal
 
 from io import BytesIO
+
 
 
 connect('DOGECOIN_MONITOR', host='localhost', port=27017)
@@ -32,7 +35,7 @@ class BTCHisInfo(Document):
     volume = StringField()
     def get_dict(self):
         return {
-            'date':self.date,
+            'date':self.date.timestamp(),
             'open':self.open,
             'close':self.close,
             'high':self.high,
@@ -52,12 +55,12 @@ tracecfg = aiohttp.TraceConfig()
 tracecfg.on_request_start.append(on_request_start)
 tracecfg.on_request_end.append(on_request_end)
 
-async def make_req2(dvd: int):
+async def make_req2(dvd: int, typ: str='BTC'):
     ima = datetime.datetime.now()
     prv = ima - datetime.timedelta(days=dvd)
     async with aiohttp.ClientSession(trace_configs=[tracecfg]) as s:      
         async with s.get(
-            f'''https://api.nasdaq.com/api/quote/BTC/historical?assetclass=crypto&fromdate={prv.strftime('%Y-%m-%d')}&limit={dvd}&todate={ima.strftime('%Y-%m-%d')}''',
+            f'''https://api.nasdaq.com/api/quote/{typ}/historical?assetclass=crypto&fromdate={prv.strftime('%Y-%m-%d')}&limit={dvd}&todate={ima.strftime('%Y-%m-%d')}''',
             headers={
                 "accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
                 "accept-encoding":"gzip, deflate, br",
@@ -86,7 +89,7 @@ from matplotlib.pylab import date2num
 import numpy
 
 
-async def sketch(s: dict) -> BytesIO:
+async def sketch(s: dict, typ: str='BTC') -> BytesIO:
     df = pandas.DataFrame.from_dict(s)
     df["datetime"] = pandas.to_datetime(df['date'])
     df.set_index("datetime",inplace=True)
@@ -111,7 +114,7 @@ async def sketch(s: dict) -> BytesIO:
         type='candle',
         mav=(7, 30, 60), 
         # volume=True, 
-        title='BTC historical',
+        title=f'{typ} historical',
         ylabel='USD $', 
         # ylabel_lower='Shares\nTraded Volume', 
         figratio=(15, 10), 
@@ -147,11 +150,11 @@ async def sketch(s: dict) -> BytesIO:
 #     })
 
 @app.get('/master')
-async def master(prv: int):
-    s = ujson.loads(await make_req2(prv))['data']['tradesTable']['rows']
+async def master(prv: int, typ: str='BTC'):
+    s = ujson.loads(await make_req2(prv, typ))['data']['tradesTable']['rows']
     # print(s)
     # print(type(s))
-    pic = await sketch(s)
+    pic = await sketch(s, typ)
     return Response(pic.read(), media_type="image/png", headers={
         'Access-Control-Allow-Origin': '*',
         "Access-Control-Allow-Methods": "POST, GET, PUT, OPTIONS, DELETE",
@@ -159,7 +162,7 @@ async def master(prv: int):
     })
 
 @app.get('/save')
-async def save_1(prv: int):
+async def save_1(prv: int, typ: str='BTC'):
     print(prv)
     # res = await make_req2(prv)
     # BTCHisInfo.pk = 'date'
@@ -174,11 +177,11 @@ async def save_1(prv: int):
     })
 
 @app.get('/load')
-async def load_1():
+async def load_1(typ: str='BTC'):
     # print(BTCHisInfo.objects().to_json())
     # j = ujson.loads(BTCHisInfo.objects().to_json())
     # print(j)
-    pic = await sketch([j.get_dict() for j in BTCHisInfo.objects()])
+    pic = await sketch([j.get_dict() for j in BTCHisInfo.objects()], typ)
     return Response(pic.read(), media_type="image/png", headers={
         'Access-Control-Allow-Origin': '*',
         "Access-Control-Allow-Methods": "POST, GET, PUT, OPTIONS, DELETE",
@@ -197,6 +200,47 @@ async def info_1():
         "Access-Control-Allow-Headers": "Access-Control-Allow-Origin"
     })
 
+from bs4 import BeautifulSoup as BS
+
+@app.get('/cryptocurrencies')
+async def get_cryptocurrencies():
+    async with aiohttp.ClientSession(trace_configs=[tracecfg]) as s:
+        async with s.get(
+            f'''https://www.nasdaq.com/market-activity/cryptocurrency''',
+            headers={
+                "accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
+                "accept-encoding":"gzip, deflate, br",
+                "accept-language":"zh-CN,zh;q=0.9",
+                "cache-control":"no-cache",
+                "dnt":"1",
+                "pragma":"no-cache",
+                "sec-fetch-mode":"navigate",
+                "sec-fetch-site":"none",
+                "sec-fetch-user":"?1",
+                "upgrade-insecure-requests":"1",
+                "user-agent":"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36"
+            }
+        ) as r:
+            res = await r.text()
+            # print(res)
+        b = BS(res, 'html.parser')
+        ccs = [i['data-symbol'] for i in b('tr', attrs={'data-asset-class':'cryptocurrency'})]
+        print(ccs)
+
+        return Response(ujson.dumps(ccs), headers={
+            'Access-Control-Allow-Origin': '*',
+            "Access-Control-Allow-Methods": "POST, GET, PUT, OPTIONS, DELETE",
+            "Access-Control-Allow-Headers": "Access-Control-Allow-Origin"
+        })
+
+import os
+# import shlex
+@app.get('/build/{b:path}')
+async def file_proxy(b):
+    print(os.getcwd())
+    if '..' in b:
+        return HTTPException(403, {'msg': '老师傅行行好别打了= ='})
+    return FileResponse(f'{os.getcwd()}/build/{b.replace("..","")}')
 
 if __name__ == '__main__':
     uvicorn.run(app)
