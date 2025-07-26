@@ -1,3 +1,5 @@
+# 后端跑server.py，UI去根目录跑npm start
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
